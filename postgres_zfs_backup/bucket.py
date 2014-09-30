@@ -39,7 +39,7 @@ class Bucket(object):
 
         key = self.bucket.new_key(key_name)
         logger.info('Pushing key %s...' % key_name)
-        key.set_contents_from_file(p.stdout)
+        key.set_contents_from_stream(p.stdout)
         logger.info('Pushed key %s' % key_name)
 
     def remove_key(self, key_name):
