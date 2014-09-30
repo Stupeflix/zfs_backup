@@ -50,6 +50,7 @@ class Backup(object):
 
     def create(self):
         snapshot = new_snapshot_name()
+
         command(
             cmd=self._build_cmd('sudo zfs snapshot %s' % snapshot),
             check=True)

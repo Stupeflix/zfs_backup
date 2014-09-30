@@ -38,7 +38,9 @@ class Bucket(object):
             stdin=stream)
 
         key = self.bucket.new_key(key_name)
+        logger.info('Pushing key %s...' % key_name)
         key.set_contents_from_file(p.stdout)
+        logger.info('Pushed key %s' % key_name)
 
     def remove_key(self, key_name):
         self.bucket.delete_key(key_name)
