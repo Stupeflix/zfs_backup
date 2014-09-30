@@ -4,7 +4,7 @@ from setuptools import setup
 import os.path as op
 CURRENT_DIR = op.dirname(__file__)
 
-version = open(op.join(CURRENT_DIR, 'VERSION.txt')).read()
+version = open(op.join(CURRENT_DIR, 'postgres_zfs_backup', 'VERSION.txt')).read()
 
 requirements = open(op.join(CURRENT_DIR, 'requirements.txt')).read()
 

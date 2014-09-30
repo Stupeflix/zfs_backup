@@ -18,7 +18,6 @@ from postgres_zfs_backup import settings
 settings.CURRENT_DIR = os.path.dirname(__file__)
 settings.VERSION = open(os.path.join(
     settings.CURRENT_DIR,
-    '..',
     'VERSION.txt')
 ).read()
 
