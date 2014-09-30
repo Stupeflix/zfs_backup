@@ -22,6 +22,7 @@ def cli(enable_push, hot_backup):
 
     backup = Backup(hot_backup=hot_backup)
     snapshot, last_backup = backup.get_last_snapshot()
+    last_cleanup = None
 
     if last_backup is None:
         logger.info('No snapshot found')
@@ -30,8 +31,12 @@ def cli(enable_push, hot_backup):
 
     while True:
         if last_backup is None or last_backup <= datetime.now() - timedelta(seconds=settings.BACKUP_INTERVAL):
-            backup.create()
             last_backup = datetime.now()
+            backup.create()
+
+        if last_cleanup is None or last_cleanup <= datetime.now() - timedelta(seconds=30):
+            last_cleanup = datetime.now()
+            backup.cleanup_old_snapshots()
 
         time.sleep(1)
 
