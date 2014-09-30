@@ -1,0 +1,4 @@
+click==3.3
+boto==2.32.1
+raven==4.0.2
+logutils==0.3.3
