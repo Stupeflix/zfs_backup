@@ -24,6 +24,9 @@ settings.VERSION = open(os.path.join(
 # -----------------------------------------------------------------------------
 # Configure logging
 
+settings.SNAPSHOT_PREFIX = '@autobackup-'
+settings.SNAPSHOT_DATE_FORMAT = '%Y-%m-%d-%H-%M-%S-%f'
+
 settings.LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,  # this fixes the problem

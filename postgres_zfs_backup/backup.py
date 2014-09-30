@@ -1,5 +1,5 @@
 from postgres_zfs_backup import settings
-from postgres_zfs_backup.utils import command
+from postgres_zfs_backup.utils import command, parse_snapshot, new_snapshot_name
 from datetime import datetime, timedelta
 
 import logging
@@ -7,6 +7,7 @@ logger = logging.getLogger(__name__)
 
 
 class Backup(object):
+
     def __init__(self, hot_backup):
         self.hot_backup = hot_backup
 
@@ -19,33 +20,21 @@ class Backup(object):
             post = 'sudo service postgresql start'
         return '%s && %s && %s' % (pre, cmd, post)
 
-    def _snapshot_name(self):
-        return '%s@autobackup-%s' % (
-            settings.POSTGRES_FS,
-            datetime.now().strftime('%Y-%m-%d-%H-%M-%S-%f'))
-
-    def _parse_snapshot(self, line):
-        parts = line.strip().split()
-        if len(parts) > 0:
-            snapshot = parts.pop(0)
-            date = ' '.join(parts)
-            try:
-                date = datetime.strptime(date, '%a %b %d %H:%M %Y')
-            except ValueError:
-                pass
-            else:
-                return snapshot, date
-        return None, None
-
     def _list_snapshots(self):
         p = command(
             cmd='sudo zfs list -r -t snapshot -o name,creation %s' % settings.POSTGRES_FS,
             check=True)
 
         for line in p.stdout:
-            snapshot, date = self._parse_snapshot(line)
+            snapshot, date = parse_snapshot(line)
             if snapshot is not None and date is not None:
                 yield snapshot, date
+
+    def stream_last_snapshot(self):
+        snapshot, date = self.get_last_snapshot()
+        p = command(
+            cmd='sudo zfs send %s' % snapshot)
+        return snapshot, p.stdout
 
     def get_last_snapshot(self):
         p = command(
@@ -56,11 +45,11 @@ class Backup(object):
         date = None
         lines = p.stdout.readlines()
         if len(lines) > 0:
-            snapshot, date = self._parse_snapshot(lines[0])
+            snapshot, date = parse_snapshot(lines[0])
         return snapshot, date
 
     def create(self):
-        snapshot = self._snapshot_name()
+        snapshot = new_snapshot_name()
         command(
             cmd=self._build_cmd('sudo zfs snapshot %s' % snapshot),
             check=True)
