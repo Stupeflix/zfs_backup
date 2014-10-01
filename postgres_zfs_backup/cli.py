@@ -12,12 +12,6 @@ logger = logging.getLogger(__name__)
 
 @click.command()
 @click.version_option(settings.VERSION)
-@click.option(
-    '--enable-push',
-    is_flag=True)
-@click.option(
-    '--hot-backup',
-    is_flag=True)
 def cli(enable_push, hot_backup):
     logger.info('Initializing...')
 
@@ -29,20 +23,22 @@ def cli(enable_push, hot_backup):
     else:
         logger.info('Last snapshot: %s (%s)' % (snapshot, last_backup))
 
-    if enable_push is True:
-        bucket = Bucket()
+    if hasattr(settings, 'BUCKET_CONF'):
+        bucket = Bucket(settings.BUCKET_CONF)
         key_name, last_push = bucket.get_last_key()
 
     while True:
         # Create / cleanup backups
-        if last_backup is None or last_backup <= datetime.now() - timedelta(seconds=settings.BACKUP_INTERVAL):
+        limit = datetime.now() - timedelta(seconds=settings.SNAPSHOT_INTERVAL)
+        if last_backup is None or last_backup <= limit:
             last_backup = datetime.now()
             backup.create()
         backup.cleanup_old_snapshots()
 
         # Create / cleanup pushed backups
-        if enable_push is True:
-            if last_push is None or last_push <= datetime.now() - timedelta(seconds=settings.PUSH_BACKUP_INTERVAL):
+        if hasattr(settings, 'BUCKET_CONF'):
+            limit = datetime.now() - timedelta(seconds=settings.BUCKET_CONF['PUSH_INTERVAL'])
+            if last_push is None or last_push <= limit:
                 last_push = datetime.now()
                 snapshot_name, stream = backup.stream_last_snapshot()
                 bucket.push(snapshot_name, stream)

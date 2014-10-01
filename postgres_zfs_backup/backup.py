@@ -22,7 +22,7 @@ class Backup(object):
 
     def _list_snapshots(self):
         p = command(
-            cmd='sudo zfs list -r -t snapshot -o name,creation %s' % settings.POSTGRES_FS,
+            cmd='sudo zfs list -r -t snapshot -o name,creation %s' % settings.FILE_SYSTEM,
             check=True)
 
         for line in p.stdout:
@@ -38,7 +38,7 @@ class Backup(object):
 
     def get_last_snapshot(self):
         p = command(
-            cmd='sudo zfs list -r -t snapshot -o name,creation %s | tail -n 1' % settings.POSTGRES_FS,
+            cmd='sudo zfs list -r -t snapshot -o name,creation %s | tail -n 1' % settings.FILE_SYSTEM,
             check=True)
 
         snapshot = None
@@ -63,7 +63,7 @@ class Backup(object):
         logger.info('Destroyed snapshot %s' % snapshot)
 
     def cleanup_old_snapshots(self):
-        limit = datetime.now() - timedelta(seconds=settings.MAX_BACKUP_AGE)
+        limit = datetime.now() - timedelta(seconds=settings.SNAPSHOT_MAX_AGE)
         for snapshot, date in self._list_snapshots():
             if date < limit:
                 self.remove_snapshot(snapshot)

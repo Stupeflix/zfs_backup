@@ -1,17 +1,18 @@
-from postgres_zfs_backup import settings
-from postgres_zfs_backup.utils import parse_snapshot, command
+from postgres_zfs_backup.utils import parse_snapshot, command, filesizeformat
 
 import boto
+import cStringIO
 import logging
 logger = logging.getLogger(__name__)
 
 
 class Bucket(object):
-    def __init__(self):
+    def __init__(self, settings):
+        self.settings = settings
         self.conn = boto.connect_s3(
-            settings.AWS_ACCESS_KEY_ID,
-            settings.AWS_SECRET_ACCESS_KEY)
-        self.bucket = self.conn.get_bucket(settings.S3_BUCKET)
+            self.settings['ACCESS_KEY_ID'],
+            self.settings['SECRET_ACCESS_KEY'])
+        self.bucket = self.conn.get_bucket(self.settings['BUCKET'])
 
     def _list_keys(self):
         for key in self.bucket.get_all_keys():
@@ -36,10 +37,22 @@ class Bucket(object):
         p = command(
             cmd='gzip -fc',
             stdin=stream)
+        stream = p.stdout
 
-        key = self.bucket.new_key(key_name)
         logger.info('Pushing key %s...' % key_name)
-        key.set_contents_from_stream(p.stdout)
+        uploader = self.bucket.initiate_multipart_upload(
+            key_name=key_name)
+
+        chunk = stream.read(self.settings['CHUNK_SIZE'])
+        part_num = 1
+        while chunk:
+            fp = cStringIO.StringIO(chunk)
+            uploader.upload_part_from_file(fp, part_num=part_num)
+            logger.info('Pushed %s to S3' % filesizeformat(self.settings['CHUNK_SIZE']))
+            chunk = stream.read(self.settings['CHUNK_SIZE'])
+            part_num += 1
+
+        uploader.complete_upload()
         logger.info('Pushed key %s' % key_name)
 
     def remove_key(self, key_name):
@@ -53,7 +66,7 @@ class Bucket(object):
                 'name': key_name,
                 'date': date
             })
-        if len(keys) > settings.MAX_S3_BACKUPS:
+        if len(keys) > self.settings['MAX_FILES']:
             for i, hit in enumerate(sorted(keys, key=lambda k: k['date'], reverse=True)):
-                if i >= settings.MAX_S3_BACKUPS:
+                if i >= self.settings['MAX_FILES']:
                     self.remove_key(hit['name'])
