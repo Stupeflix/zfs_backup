@@ -13,7 +13,7 @@ class Backup(object):
 
     def _build_cmd(self, cmd):
         if self.hot_backup:
-            pre = 'sudo -u postgres psql -c "select pg_start_backup(\"backup\");"'
+            pre = 'sudo -u postgres psql -c "select pg_start_backup(\'backup\');"'
             post = 'sudo -u postgres psql -c "select pg_stop_backup();"'
         else:
             pre = 'sudo service postgresql stop'
