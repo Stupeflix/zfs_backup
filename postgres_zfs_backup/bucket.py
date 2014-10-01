@@ -1,5 +1,6 @@
 from postgres_zfs_backup.utils import parse_snapshot, command, filesizeformat
 
+import os
 import boto
 import cStringIO
 import logging
@@ -48,7 +49,8 @@ class Bucket(object):
         while chunk:
             fp = cStringIO.StringIO(chunk)
             uploader.upload_part_from_file(fp, part_num=part_num)
-            logger.info('Pushed %s to S3' % filesizeformat(self.settings['CHUNK_SIZE']))
+            fp.seek(0, os.SEEK_END)
+            logger.info('Pushed %s to S3' % filesizeformat(fp.tell()))
             chunk = stream.read(self.settings['CHUNK_SIZE'])
             part_num += 1
 
