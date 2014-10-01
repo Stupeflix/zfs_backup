@@ -1,5 +1,6 @@
-from postgres_zfs_backup.utils import parse_snapshot, command, filesizeformat
+from postgres_zfs_backup import utils
 
+from datetime import datetime
 import os
 import boto
 import cStringIO
@@ -17,7 +18,7 @@ class Bucket(object):
 
     def _list_keys(self):
         for key in self.bucket.get_all_keys():
-            snapshot, date = parse_snapshot(key.name.replace('.gzip', ''))
+            snapshot, date = utils.parse_snapshot(key.name.replace('.gzip', ''))
             if snapshot is not None and date is not None:
                 yield key.name, date
 
@@ -35,11 +36,12 @@ class Bucket(object):
         key_name = '@%s.gzip' % snapshot.split('@')[-1]
 
         # Gzip the stream
-        p = command(
+        p = utils.command(
             cmd='gzip -fc',
             stdin=stream)
         stream = p.stdout
 
+        start_time = datetime.now()
         logger.info('Pushing key %s...' % key_name)
         uploader = self.bucket.initiate_multipart_upload(
             key_name=key_name)
@@ -50,12 +52,12 @@ class Bucket(object):
             fp = cStringIO.StringIO(chunk)
             uploader.upload_part_from_file(fp, part_num=part_num)
             fp.seek(0, os.SEEK_END)
-            logger.info('Pushed %s to S3' % filesizeformat(fp.tell()))
+            logger.info('Pushed %s to S3' % utils.filesizeformat(fp.tell()))
             chunk = stream.read(self.settings['CHUNK_SIZE'])
             part_num += 1
 
         uploader.complete_upload()
-        logger.info('Pushed key %s' % key_name)
+        logger.info('Pushed key %s in %ss' % (key_name, utils.total_seconds(datetime.now() - start_time)))
 
     def remove_key(self, key_name):
         self.bucket.delete_key(key_name)

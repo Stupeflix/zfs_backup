@@ -21,7 +21,7 @@ def cli():
     if last_backup is None:
         logger.info('No snapshot found')
     else:
-        logger.info('Last snapshot: %s (%s)' % (snapshot, last_backup))
+        logger.info('Last snapshot: %s' % snapshot)
 
     if hasattr(settings, 'BUCKET_CONF'):
         bucket = Bucket(settings.BUCKET_CONF)

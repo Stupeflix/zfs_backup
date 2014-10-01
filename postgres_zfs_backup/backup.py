@@ -1,5 +1,5 @@
 from postgres_zfs_backup import settings
-from postgres_zfs_backup.utils import command, parse_snapshot, new_snapshot_name
+from postgres_zfs_backup import utils
 from datetime import datetime, timedelta
 
 import logging
@@ -21,23 +21,23 @@ class Backup(object):
         return '%s && %s && %s' % (pre, cmd, post)
 
     def _list_snapshots(self):
-        p = command(
+        p = utils.command(
             cmd='sudo zfs list -r -t snapshot -o name,creation %s' % settings.FILE_SYSTEM,
             check=True)
 
         for line in p.stdout:
-            snapshot, date = parse_snapshot(line)
+            snapshot, date = utils.parse_snapshot(line)
             if snapshot is not None and date is not None:
                 yield snapshot, date
 
     def stream_last_snapshot(self):
         snapshot, date = self.get_last_snapshot()
-        p = command(
+        p = utils.command(
             cmd='sudo zfs send %s' % snapshot)
         return snapshot, p.stdout
 
     def get_last_snapshot(self):
-        p = command(
+        p = utils.command(
             cmd='sudo zfs list -r -t snapshot -o name,creation %s | tail -n 1' % settings.FILE_SYSTEM,
             check=True)
 
@@ -45,19 +45,19 @@ class Backup(object):
         date = None
         lines = p.stdout.readlines()
         if len(lines) > 0:
-            snapshot, date = parse_snapshot(lines[0])
+            snapshot, date = utils.parse_snapshot(lines[0])
         return snapshot, date
 
     def create(self):
-        snapshot = new_snapshot_name()
+        snapshot = utils.new_snapshot_name()
 
-        command(
+        utils.command(
             cmd=self._build_cmd('sudo zfs snapshot %s' % snapshot),
             check=True)
         logger.info('Created snapshot %s' % snapshot)
 
     def remove_snapshot(self, snapshot):
-        command(
+        utils.command(
             cmd='sudo zfs destroy %s' % snapshot,
             check=True)
         logger.info('Destroyed snapshot %s' % snapshot)
