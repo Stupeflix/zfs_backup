@@ -18,12 +18,14 @@ from postgres_zfs_backup import settings
 settings.CURRENT_DIR = os.path.dirname(__file__)
 settings.VERSION = open(os.path.join(
     settings.CURRENT_DIR,
-    '..',
     'VERSION.txt')
 ).read()
 
 # -----------------------------------------------------------------------------
 # Configure logging
+
+settings.SNAPSHOT_PREFIX = '@autobackup-'
+settings.SNAPSHOT_DATE_FORMAT = '%Y-%m-%d-%H-%M-%S-%f'
 
 settings.LOGGING = {
     'version': 1,
