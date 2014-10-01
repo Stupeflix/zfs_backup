@@ -12,10 +12,10 @@ logger = logging.getLogger(__name__)
 
 @click.command()
 @click.version_option(settings.VERSION)
-def cli(enable_push, hot_backup):
+def cli():
     logger.info('Initializing...')
 
-    backup = Backup(hot_backup=hot_backup)
+    backup = Backup(backup_method=settings.SNAPSHOT_METHOD)
     snapshot, last_backup = backup.get_last_snapshot()
 
     if last_backup is None:

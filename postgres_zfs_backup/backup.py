@@ -8,8 +8,8 @@ logger = logging.getLogger(__name__)
 
 class Backup(object):
 
-    def __init__(self, hot_backup):
-        self.hot_backup = hot_backup
+    def __init__(self, backup_method):
+        self.hot_backup = backup_method == 'hot'
 
     def _build_cmd(self, cmd):
         if self.hot_backup:
