@@ -1,2 +1,2 @@
 include requirements.txt
-include postgres_zfs_backup/VERSION.txt
+include zfs_backup/VERSION.txt

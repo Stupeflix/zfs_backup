@@ -1,4 +1,4 @@
-from postgres_zfs_backup import settings
+from zfs_backup import settings
 from subprocess import Popen, PIPE
 
 from datetime import datetime
@@ -26,7 +26,7 @@ def command(cmd, check=False, **params):
 
 
 def new_snapshot_name():
-    return '%s%s%s' % (
+    return '%s@%s%s' % (
         settings.FILE_SYSTEM,
         settings.SNAPSHOT_PREFIX,
         datetime.now().strftime(settings.SNAPSHOT_DATE_FORMAT))

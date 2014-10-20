@@ -1,6 +1,6 @@
-from postgres_zfs_backup import utils
+from zfs_backup import utils
 
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 import boto
 import cStringIO
@@ -9,18 +9,26 @@ logger = logging.getLogger(__name__)
 
 
 class Bucket(object):
-    def __init__(self, settings):
+
+    def __init__(self, settings, snapshot):
         self.settings = settings
+        self.snapshot = snapshot
         self.conn = boto.connect_s3(
             self.settings['ACCESS_KEY_ID'],
             self.settings['SECRET_ACCESS_KEY'])
         self.bucket = self.conn.get_bucket(self.settings['BUCKET'])
 
     def _list_keys(self):
-        for key in self.bucket.get_all_keys():
+        for key in self.bucket.get_all_keys(filter=self.snapshot.settings['FILE_SYSTEM'].replace('/', '_')):
             snapshot, date = utils.parse_snapshot(key.name.replace('.gzip', ''))
             if snapshot is not None and date is not None:
                 yield key.name, date
+
+    @property
+    def last_key(self):
+        if not hasattr(self, '_last_key'):
+            self._last_key = self.get_last_key()
+        return self._last_key
 
     def get_last_key(self):
         last_key = None
@@ -29,11 +37,19 @@ class Bucket(object):
             if last_date is None or last_date < date:
                 last_key = key
                 last_date = date
-        return last_key, last_date
+        if last_key is None:
+            return {}
+        else:
+            return {
+                'key': last_key,
+                'date': last_date
+            }
 
     def push(self, snapshot, stream):
+        self.last_key['date'] = datetime.now()
+
         # Cut the first part of the snapshot name
-        key_name = '@%s.gzip' % snapshot.split('@')[-1]
+        key_name = '%s.gzip' % snapshot.replace('/', '_')
 
         # Gzip the stream
         p = utils.command(
@@ -58,6 +74,12 @@ class Bucket(object):
 
         uploader.complete_upload()
         logger.info('Pushed key %s in %ss' % (key_name, utils.total_seconds(datetime.now() - start_time)))
+
+    def try_to_push(self):
+        limit = datetime.now() - timedelta(seconds=self.settings['PUSH_INTERVAL'])
+        if 'date' not in self.last_key or self.last_key['date'] <= limit:
+            snapshot_name, stream = self.snapshot.stream_last_snapshot()
+            self.push(snapshot_name, stream)
 
     def remove_key(self, key_name):
         self.bucket.delete_key(key_name)
