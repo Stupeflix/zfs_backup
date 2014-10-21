@@ -13,7 +13,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-@click.command()
+@click.group()
 @click.version_option(settings.VERSION)
 def cli():
     logger.info('Initializing...')
