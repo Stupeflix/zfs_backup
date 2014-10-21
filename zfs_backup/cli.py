@@ -4,6 +4,7 @@ from zfs_backup import settings
 from zfs_backup import validators
 from zfs_backup import utils
 
+from datetime import datetime
 import psutil
 import signal
 import click
@@ -19,11 +20,13 @@ logger = logging.getLogger(__name__)
 @click.group()
 @click.version_option(settings.VERSION)
 def cli():
-    logger.info('Initializing...')
+    pass
 
 
 @cli.command()
 def snapshot_daemon():
+    logger.info('Initializing daemon...')
+
     @utils.run_once
     def soft_exit(*args, **kwargs):
         logger.info('Waiting for children...')
@@ -65,6 +68,9 @@ def snapshot_daemon():
     help='Name of an existing ZFS snapshot.',
     callback=validators.zfs_snapshot)
 def send_snapshot(snapshot_name):
+    logger.info('Initializing a sender for %s...' % snapshot_name)
+    start_time = datetime.now()
+
     conf = json.loads(sys.stdin.read())
     bucket = Bucket(conf)
 
@@ -81,6 +87,8 @@ def send_snapshot(snapshot_name):
     bucket.push(
         snapshot_name,
         utils.stream_snapshot(snapshot_name))
+
+    logger.info('Sender for %s: done in %ss' % (snapshot_name, utils.total_seconds(datetime.now() - start_time)))
 
 
 def main():
