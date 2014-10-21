@@ -110,7 +110,7 @@ class PostgresSnapshot(Snapshot):
 class PostgresHotSnapshot(Snapshot):
 
     def _create(self, cmd):
-        cmd = 'sudo -u postgres psql -c "select pg_start_backup(\'backup\');" && %s' % cmd
+        cmd = 'sudo -u postgres psql -c "select pg_start_backup(\'zfs_backup\', true);" && %s' % cmd
         cmd = '%s && sudo -u postgres psql -c "select pg_stop_backup();"' % cmd
         utils.command(
             cmd=cmd,
