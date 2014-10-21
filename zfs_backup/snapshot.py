@@ -81,7 +81,7 @@ class Snapshot(object):
 
     def try_to_create(self):
         limit = datetime.now() - timedelta(seconds=self.settings['SNAPSHOT_INTERVAL'])
-        if 'date' in self.last_snapshot or self.last_snapshot['date'] <= limit:
+        if 'date' not in self.last_snapshot or self.last_snapshot['date'] <= limit:
             self.create()
 
     def remove_snapshot(self, snapshot):
