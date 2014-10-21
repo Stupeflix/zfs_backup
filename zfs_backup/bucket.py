@@ -44,8 +44,8 @@ class Bucket(object):
             stdin=stream)
         stream = p.stdout
 
-        start_time = datetime.now()
-        logger.info('Pushing key %s...' % key_name)
+        # start_time = datetime.now()
+        # logger.info('Pushing key %s...' % key_name)
         self.uploader = self.bucket.initiate_multipart_upload(
             key_name=key_name)
 
@@ -55,14 +55,14 @@ class Bucket(object):
             fp = cStringIO.StringIO(chunk)
             self.uploader.upload_part_from_file(fp, part_num=part_num)
             fp.seek(0, os.SEEK_END)
-            logger.info('Pushed %s to S3' % utils.filesizeformat(fp.tell()))
+            # logger.info('Pushed %s to S3' % utils.filesizeformat(fp.tell()))
             chunk = stream.read(self.settings['CHUNK_SIZE'])
             part_num += 1
 
         self._uploaded = True
         if not hasattr(self, '_terminating'):
             self.uploader.complete_upload()
-            logger.info('Pushed key %s in %ss' % (key_name, utils.total_seconds(datetime.now() - start_time)))
+            # logger.info('Pushed key %s in %ss' % (key_name, utils.total_seconds(datetime.now() - start_time)))
 
     def create_job(self, snapshot_name):
         executable = sys.executable

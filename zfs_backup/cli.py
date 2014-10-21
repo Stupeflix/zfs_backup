@@ -31,9 +31,10 @@ def snapshot_daemon():
     def soft_exit(*args, **kwargs):
         logger.info('Waiting for children...')
         p = psutil.Process(os.getpid())
-        child_pid = p.get_children(recursive=True)
-        for pid in child_pid:
-            os.waitpid(pid.pid, 0)
+        children = p.get_children(recursive=True)
+        for child in children:
+            os.kill(child.pid, signal.SIGTERM)
+            os.waitpid(child.pid, 0)
 
     signal.signal(signal.SIGTERM, soft_exit)
     signal.signal(signal.SIGINT, soft_exit)
