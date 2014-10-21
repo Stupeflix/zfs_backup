@@ -1,4 +1,5 @@
 from zfs_backup import utils
+from zfs_backup import settings
 
 from datetime import datetime, timedelta
 from subprocess import PIPE
@@ -35,7 +36,7 @@ class Bucket(object):
 
     def push(self, snapshot, stream):
         # Cut the first part of the snapshot name
-        key_name = '%s.gzip' % snapshot.replace('/', '_')
+        key_name = ('%s:%s.gzip' % settings.HOSTNAME, snapshot).replace('/', '_')
 
         # Gzip the stream
         p = utils.command(
@@ -87,7 +88,8 @@ class SnapshotBucket(Bucket):
         self.snapshot = snapshot
 
     def _list_keys(self):
-        for key in self.bucket.get_all_keys(prefix=self.snapshot.settings['FILE_SYSTEM'].replace('/', '_')):
+        prefix = ('%s:%s' % (settings.HOSTNAME, self.snapshot.settings['FILE_SYSTEM'])).replace('/', '_')
+        for key in self.bucket.get_all_keys(prefix=prefix):
             snapshot, date = utils.parse_snapshot(key.name.replace('.gzip', ''))
             if snapshot is not None and date is not None:
                 yield key.name, date

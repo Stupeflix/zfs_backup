@@ -1,6 +1,7 @@
 import zfs_backup
 import logging.config
 import logutils.dictconfig
+import socket
 import imp
 import os
 
@@ -24,6 +25,7 @@ settings.VERSION = open(os.path.join(
 # -----------------------------------------------------------------------------
 # Configure logging
 
+settings.HOSTNAME = socket.gethostname()
 settings.SNAPSHOT_PREFIX = 'autobackup-'
 settings.SNAPSHOT_DATE_FORMAT = '%Y-%m-%d-%H-%M-%S-%f'
 settings.LOG_DIRECTORY = '/var/log/zfs_backup'
