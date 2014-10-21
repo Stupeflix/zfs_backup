@@ -4,10 +4,13 @@ from zfs_backup import settings
 from zfs_backup import validators
 from zfs_backup import utils
 
+import psutil
+import signal
 import click
 import time
-import sys
 import json
+import sys
+import os
 
 import logging
 logger = logging.getLogger(__name__)
@@ -21,6 +24,21 @@ def cli():
 
 @cli.command()
 def snapshot_daemon():
+    @utils.run_once
+    def soft_exit(*args, **kwargs):
+        logger.info('Waiting for children...')
+        p = psutil.Process(os.getpid())
+        child_pid = p.get_children(recursive=True)
+        for pid in child_pid:
+            os.waitpid(pid.pid, 0)
+
+    signal.signal(signal.SIGTERM, soft_exit)
+    signal.signal(signal.SIGINT, soft_exit)
+    signal.signal(signal.SIGQUIT, soft_exit)
+    signal.signal(signal.SIGHUP, soft_exit)
+
+    # -----
+
     snapshots = []
 
     for conf in settings.SNAPSHOTS:
@@ -38,7 +56,7 @@ def snapshot_daemon():
                 bucket.try_to_push()
                 bucket.cleanup_old_keys()
 
-        time.sleep(20)
+        time.sleep(5)
 
 
 @cli.command()
@@ -48,7 +66,19 @@ def snapshot_daemon():
     callback=validators.zfs_snapshot)
 def send_snapshot(snapshot_name):
     conf = json.loads(sys.stdin.read())
-    Bucket(conf).push(
+    bucket = Bucket(conf)
+
+    @utils.run_once
+    def soft_exit(*args, **kwargs):
+        logger.info('Soft exit...')
+        bucket.terminate()
+
+    signal.signal(signal.SIGTERM, soft_exit)
+    signal.signal(signal.SIGINT, soft_exit)
+    signal.signal(signal.SIGQUIT, soft_exit)
+    signal.signal(signal.SIGHUP, soft_exit)
+
+    bucket.push(
         snapshot_name,
         utils.stream_snapshot(snapshot_name))
 

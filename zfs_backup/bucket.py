@@ -20,6 +20,19 @@ class Bucket(object):
             self.settings['SECRET_ACCESS_KEY'])
         self.bucket = self.conn.get_bucket(self.settings['BUCKET'])
 
+    def terminate(self):
+        if hasattr(self, '_uploaded'):
+            # Let the process to terminate
+            logger.info('Upload is almost complete, terminating...')
+            pass
+        else:
+            self._terminating = True
+            logger.info('Cancelling upload...')
+
+            # Cancel upload if needed
+            if hasattr(self, 'uploader'):
+                self.uploader.cancel_upload()
+
     def push(self, snapshot, stream):
         # Cut the first part of the snapshot name
         key_name = '%s.gzip' % snapshot.replace('/', '_')
@@ -32,21 +45,23 @@ class Bucket(object):
 
         start_time = datetime.now()
         logger.info('Pushing key %s...' % key_name)
-        uploader = self.bucket.initiate_multipart_upload(
+        self.uploader = self.bucket.initiate_multipart_upload(
             key_name=key_name)
 
         chunk = stream.read(self.settings['CHUNK_SIZE'])
         part_num = 1
         while chunk:
             fp = cStringIO.StringIO(chunk)
-            uploader.upload_part_from_file(fp, part_num=part_num)
+            self.uploader.upload_part_from_file(fp, part_num=part_num)
             fp.seek(0, os.SEEK_END)
             logger.info('Pushed %s to S3' % utils.filesizeformat(fp.tell()))
             chunk = stream.read(self.settings['CHUNK_SIZE'])
             part_num += 1
 
-        uploader.complete_upload()
-        logger.info('Pushed key %s in %ss' % (key_name, utils.total_seconds(datetime.now() - start_time)))
+        self._uploaded = True
+        if not hasattr(self, '_terminating'):
+            self.uploader.complete_upload()
+            logger.info('Pushed key %s in %ss' % (key_name, utils.total_seconds(datetime.now() - start_time)))
 
     def create_job(self, snapshot_name):
         p = utils.command(
@@ -67,7 +82,7 @@ class SnapshotBucket(Bucket):
         self.snapshot = snapshot
 
     def _list_keys(self):
-        for key in self.bucket.get_all_keys(filter=self.snapshot.settings['FILE_SYSTEM'].replace('/', '_')):
+        for key in self.bucket.get_all_keys(prefix=self.snapshot.settings['FILE_SYSTEM'].replace('/', '_')):
             snapshot, date = utils.parse_snapshot(key.name.replace('.gzip', ''))
             if snapshot is not None and date is not None:
                 yield key.name, date
