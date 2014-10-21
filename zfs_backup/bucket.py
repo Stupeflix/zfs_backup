@@ -28,11 +28,11 @@ class Bucket(object):
             pass
         else:
             self._terminating = True
-            logger.info('Cancelling upload...')
 
             # Cancel upload if needed
             if hasattr(self, 'uploader'):
                 self.uploader.cancel_upload()
+                logger.info('Upload cancelled.')
 
     def push(self, snapshot, stream):
         # Cut the first part of the snapshot name

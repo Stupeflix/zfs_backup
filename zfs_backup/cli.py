@@ -37,7 +37,10 @@ def snapshot_daemon():
         children = p.get_children(recursive=True)
         for child in children:
             os.kill(child.pid, signal.SIGTERM)
-            os.waitpid(child.pid, 0)
+            try:
+                os.waitpid(child.pid, 0)
+            except OSError:
+                pass
         os.kill(os.getpid(), signal.SIGKILL)
 
     signal.signal(signal.SIGTERM, soft_exit)
