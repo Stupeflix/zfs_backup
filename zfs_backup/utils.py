@@ -1,4 +1,4 @@
-from postgres_zfs_backup import settings
+from zfs_backup import settings
 from subprocess import Popen, PIPE
 
 from datetime import datetime
@@ -6,12 +6,16 @@ from datetime import datetime
 import math
 
 
-def command(cmd, check=False, **params):
+def command(cmd, check=False, **usr_params):
+    # Set default params
+    params = dict({
+        'shell': True,
+        'stdout': PIPE,
+        'stderr': PIPE,
+    }, **usr_params)
+
     p = Popen(
         [cmd],
-        shell=True,
-        stdout=PIPE,
-        stderr=PIPE,
         **params
     )
 
@@ -25,9 +29,9 @@ def command(cmd, check=False, **params):
     return p
 
 
-def new_snapshot_name():
-    return '%s%s%s' % (
-        settings.FILE_SYSTEM,
+def new_snapshot_name(fs):
+    return '%s@%s%s' % (
+        fs,
         settings.SNAPSHOT_PREFIX,
         datetime.now().strftime(settings.SNAPSHOT_DATE_FORMAT))
 
@@ -46,6 +50,11 @@ def parse_snapshot(line):
     return None, None
 
 
+def stream_snapshot(snapshot_name):
+    return command(
+        cmd='sudo zfs send %s' % snapshot_name).stdout
+
+
 def filesizeformat(bytes, precision=2):
     """Returns a humanized string for a given amount of bytes"""
     bytes = int(bytes)
@@ -62,3 +71,12 @@ def filesizeformat(bytes, precision=2):
 
 def total_seconds(td):
     return (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10 ** 6) / 10 ** 6
+
+
+def run_once(f):
+    def wrapper(*args, **kwargs):
+        if not wrapper.has_run:
+            wrapper.has_run = True
+            return f(*args, **kwargs)
+    wrapper.has_run = False
+    return wrapper
