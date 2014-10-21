@@ -1,8 +1,11 @@
 from zfs_backup import utils
 
 from datetime import datetime, timedelta
+from subprocess import PIPE
 import os
+import sys
 import boto
+import json
 import cStringIO
 import logging
 logger = logging.getLogger(__name__)
@@ -10,13 +13,58 @@ logger = logging.getLogger(__name__)
 
 class Bucket(object):
 
-    def __init__(self, settings, snapshot):
+    def __init__(self, settings):
         self.settings = settings
-        self.snapshot = snapshot
         self.conn = boto.connect_s3(
             self.settings['ACCESS_KEY_ID'],
             self.settings['SECRET_ACCESS_KEY'])
         self.bucket = self.conn.get_bucket(self.settings['BUCKET'])
+
+    def push(self, snapshot, stream):
+        # Cut the first part of the snapshot name
+        key_name = '%s.gzip' % snapshot.replace('/', '_')
+
+        # Gzip the stream
+        p = utils.command(
+            cmd='gzip -fc',
+            stdin=stream)
+        stream = p.stdout
+
+        start_time = datetime.now()
+        logger.info('Pushing key %s...' % key_name)
+        uploader = self.bucket.initiate_multipart_upload(
+            key_name=key_name)
+
+        chunk = stream.read(self.settings['CHUNK_SIZE'])
+        part_num = 1
+        while chunk:
+            fp = cStringIO.StringIO(chunk)
+            uploader.upload_part_from_file(fp, part_num=part_num)
+            fp.seek(0, os.SEEK_END)
+            logger.info('Pushed %s to S3' % utils.filesizeformat(fp.tell()))
+            chunk = stream.read(self.settings['CHUNK_SIZE'])
+            part_num += 1
+
+        uploader.complete_upload()
+        logger.info('Pushed key %s in %ss' % (key_name, utils.total_seconds(datetime.now() - start_time)))
+
+    def create_job(self, snapshot_name):
+        p = utils.command(
+            '%s zfs_backup send_snapshot --snapshot-name="%s"' % (sys.executable, snapshot_name),
+            stdin=PIPE)
+        p.stdin.write(json.dumps(self.settings))
+        p.stdin.close()
+
+    def remove_key(self, key_name):
+        self.bucket.delete_key(key_name)
+        logger.info('Deleted key %s' % key_name)
+
+
+class SnapshotBucket(Bucket):
+
+    def __init__(self, settings, snapshot):
+        super(SnapshotBucket, self).__init__(settings)
+        self.snapshot = snapshot
 
     def _list_keys(self):
         for key in self.bucket.get_all_keys(filter=self.snapshot.settings['FILE_SYSTEM'].replace('/', '_')):
@@ -45,45 +93,12 @@ class Bucket(object):
                 'date': last_date
             }
 
-    def push(self, snapshot, stream):
-        self.last_key['date'] = datetime.now()
-
-        # Cut the first part of the snapshot name
-        key_name = '%s.gzip' % snapshot.replace('/', '_')
-
-        # Gzip the stream
-        p = utils.command(
-            cmd='gzip -fc',
-            stdin=stream)
-        stream = p.stdout
-
-        start_time = datetime.now()
-        logger.info('Pushing key %s...' % key_name)
-        uploader = self.bucket.initiate_multipart_upload(
-            key_name=key_name)
-
-        chunk = stream.read(self.settings['CHUNK_SIZE'])
-        part_num = 1
-        while chunk:
-            fp = cStringIO.StringIO(chunk)
-            uploader.upload_part_from_file(fp, part_num=part_num)
-            fp.seek(0, os.SEEK_END)
-            logger.info('Pushed %s to S3' % utils.filesizeformat(fp.tell()))
-            chunk = stream.read(self.settings['CHUNK_SIZE'])
-            part_num += 1
-
-        uploader.complete_upload()
-        logger.info('Pushed key %s in %ss' % (key_name, utils.total_seconds(datetime.now() - start_time)))
-
     def try_to_push(self):
         limit = datetime.now() - timedelta(seconds=self.settings['PUSH_INTERVAL'])
         if 'date' not in self.last_key or self.last_key['date'] <= limit:
-            snapshot_name, stream = self.snapshot.stream_last_snapshot()
-            self.push(snapshot_name, stream)
-
-    def remove_key(self, key_name):
-        self.bucket.delete_key(key_name)
-        logger.info('Deleted key %s' % key_name)
+            self.last_key['date'] = datetime.now()
+            snapshot = self.snapshot.get_last_snapshot()
+            self.create_job(snapshot['name'])
 
     def cleanup_old_keys(self):
         keys = []

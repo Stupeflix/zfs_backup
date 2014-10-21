@@ -1,11 +1,21 @@
-from zfs_backup import settings
 from zfs_backup import utils
-from zfs_backup.bucket import Bucket
+from zfs_backup.bucket import SnapshotBucket
 from datetime import datetime, timedelta
 
 import MySQLdb
 import logging
 logger = logging.getLogger(__name__)
+
+
+def create_snapshot_from_conf(conf):
+    snapshot = None
+    if conf['TYPE'] == 'postgres':
+        snapshot = PostgresSnapshot(conf)
+    elif conf['TYPE'] == 'postgres-hot':
+        snapshot = PostgresHotSnapshot(conf)
+    elif conf['TYPE'] == 'mysql':
+        snapshot = MysqlSnapshot(conf)
+    return snapshot
 
 
 class Snapshot(object):
@@ -16,15 +26,15 @@ class Snapshot(object):
     @property
     def bucket(self):
         if not hasattr(self, '_bucket'):
-            if settings.get('BUCKET') is not None:
-                self._bucket = Bucket(settings['BUCKET'], self)
+            if 'BUCKET' in self.settings:
+                self._bucket = SnapshotBucket(self.settings['BUCKET'], self)
             else:
                 self._bucket = None
         return self._bucket
 
     def _list_snapshots(self):
         p = utils.command(
-            cmd='sudo zfs list -r -t snapshot -o name,creation %s' % settings.FILE_SYSTEM,
+            cmd='sudo zfs list -r -t snapshot -o name,creation %s' % self.settings.FILE_SYSTEM,
             check=True)
 
         for line in p.stdout:
@@ -34,9 +44,8 @@ class Snapshot(object):
 
     def stream_last_snapshot(self):
         snapshot, date = self.get_last_snapshot()
-        p = utils.command(
-            cmd='sudo zfs send %s' % snapshot)
-        return snapshot, p.stdout
+        stream = utils.stream_snapshot(snapshot)
+        return snapshot, stream
 
     @property
     def last_snapshot(self):
@@ -46,7 +55,7 @@ class Snapshot(object):
 
     def get_last_snapshot(self):
         p = utils.command(
-            cmd='sudo zfs list -r -t snapshot -o name,creation %s | tail -n 1' % settings.FILE_SYSTEM,
+            cmd='sudo zfs list -r -t snapshot -o name,creation %s | tail -n 1' % self.settings.FILE_SYSTEM,
             check=True)
 
         lines = p.stdout.readlines()
@@ -82,7 +91,7 @@ class Snapshot(object):
         logger.info('Destroyed snapshot %s' % snapshot)
 
     def cleanup_old_snapshots(self):
-        limit = datetime.now() - timedelta(seconds=settings.SNAPSHOT_MAX_AGE)
+        limit = datetime.now() - timedelta(seconds=self.settings.SNAPSHOT_MAX_AGE)
         for snapshot, date in self._list_snapshots():
             if date < limit:
                 self.remove_snapshot(snapshot)

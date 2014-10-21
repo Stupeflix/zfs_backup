@@ -1,4 +1,5 @@
 from zfs_backup import settings
+from zfs_backup import utils
 from subprocess import Popen, PIPE
 
 from datetime import datetime
@@ -6,12 +7,16 @@ from datetime import datetime
 import math
 
 
-def command(cmd, check=False, **params):
+def command(cmd, check=False, **usr_params):
+    # Set default params
+    params = dict({
+        'shell': True,
+        'stdout': PIPE,
+        'stderr': PIPE,
+    }, **usr_params)
+
     p = Popen(
         [cmd],
-        shell=True,
-        stdout=PIPE,
-        stderr=PIPE,
         **params
     )
 
@@ -44,6 +49,11 @@ def parse_snapshot(line):
         else:
             return snapshot, date
     return None, None
+
+
+def stream_snapshot(snapshot_name):
+    return utils.command(
+        cmd='sudo zfs send %s' % snapshot_name).stdout
 
 
 def filesizeformat(bytes, precision=2):
