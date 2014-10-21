@@ -1,5 +1,4 @@
 from zfs_backup import settings
-from zfs_backup import utils
 from subprocess import Popen, PIPE
 
 from datetime import datetime
@@ -52,7 +51,7 @@ def parse_snapshot(line):
 
 
 def stream_snapshot(snapshot_name):
-    return utils.command(
+    return command(
         cmd='sudo zfs send %s' % snapshot_name).stdout
 
 

@@ -14,9 +14,9 @@ setup(
 
     author='Stupeflix',
     author_email='thomas@stupeflix.com',
-    description='PostgreSQL backup tool using ZFS',
+    description='Backup tool using ZFS snapshots',
     license='MIT',
-    keywords='backup postgres postgresql zfs',
+    keywords='backup zfs snapshot postgres postgresql psql mysql',
     url='https://github.com/Stupeflix/zfs_backup',
 
     version=version,
