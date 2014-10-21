@@ -72,7 +72,7 @@ if hasattr(settings, 'SENTRY_DSN'):
 if hasattr(settings, 'ROTATING_FILE'):
     settings.LOGGING['handlers']['file'] = {
         'level': 'INFO',
-        'class': 'logging.handlers.RotatingFileHandler',
+        'class': 'handlers.ConcurrentRotatingFileHandler',
         'formatter': 'standard',
         'filename': os.path.join(settings.LOG_DIRECTORY, settings.ROTATING_FILE),
         'backupCount': 5,
