@@ -69,7 +69,7 @@ class Snapshot(object):
             return {}
 
     def create(self):
-        snapshot = utils.new_snapshot_name()
+        snapshot = utils.new_snapshot_name(self.settings['FILE_SYSTEM'])
         self.last_snapshot['date'] = datetime.now()
         self._create('sudo zfs snapshot %s' % snapshot)
         logger.info('Created snapshot %s' % snapshot)

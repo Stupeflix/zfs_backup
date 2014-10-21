@@ -29,9 +29,9 @@ def command(cmd, check=False, **usr_params):
     return p
 
 
-def new_snapshot_name():
+def new_snapshot_name(fs):
     return '%s@%s%s' % (
-        settings.FILE_SYSTEM,
+        fs,
         settings.SNAPSHOT_PREFIX,
         datetime.now().strftime(settings.SNAPSHOT_DATE_FORMAT))
 
