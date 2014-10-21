@@ -34,7 +34,7 @@ class Snapshot(object):
 
     def _list_snapshots(self):
         p = utils.command(
-            cmd='sudo zfs list -r -t snapshot -o name,creation %s' % self.settings.FILE_SYSTEM,
+            cmd='sudo zfs list -r -t snapshot -o name,creation %s' % self.settings['FILE_SYSTEM'],
             check=True)
 
         for line in p.stdout:
@@ -55,7 +55,7 @@ class Snapshot(object):
 
     def get_last_snapshot(self):
         p = utils.command(
-            cmd='sudo zfs list -r -t snapshot -o name,creation %s | tail -n 1' % self.settings.FILE_SYSTEM,
+            cmd='sudo zfs list -r -t snapshot -o name,creation %s | tail -n 1' % self.settings['FILE_SYSTEM'],
             check=True)
 
         lines = p.stdout.readlines()
@@ -80,7 +80,7 @@ class Snapshot(object):
             check=True)
 
     def try_to_create(self):
-        limit = datetime.now() - timedelta(seconds=self.settings.SNAPSHOT_INTERVAL)
+        limit = datetime.now() - timedelta(seconds=self.settings['SNAPSHOT_INTERVAL'])
         if self.last_snapshot is None or self.last_snapshot['date'] <= limit:
             self.create()
 
@@ -91,7 +91,7 @@ class Snapshot(object):
         logger.info('Destroyed snapshot %s' % snapshot)
 
     def cleanup_old_snapshots(self):
-        limit = datetime.now() - timedelta(seconds=self.settings.SNAPSHOT_MAX_AGE)
+        limit = datetime.now() - timedelta(seconds=self.settings['SNAPSHOT_MAX_AGE'])
         for snapshot, date in self._list_snapshots():
             if date < limit:
                 self.remove_snapshot(snapshot)
