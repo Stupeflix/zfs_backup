@@ -27,8 +27,11 @@ def cli():
 def snapshot_daemon():
     logger.info('Initializing daemon...')
 
-    @utils.run_once
     def soft_exit(*args, **kwargs):
+        soft_exit_once()
+
+    @utils.run_once
+    def soft_exit_once():
         logger.info('Waiting for children...')
         p = psutil.Process(os.getpid())
         children = p.get_children(recursive=True)
@@ -75,8 +78,11 @@ def send_snapshot(snapshot_name):
     conf = json.loads(sys.stdin.read())
     bucket = Bucket(conf)
 
-    @utils.run_once
     def soft_exit(*args, **kwargs):
+        soft_exit_once()
+
+    @utils.run_once
+    def soft_exit_once():
         logger.info('Soft exit...')
         bucket.terminate()
 
