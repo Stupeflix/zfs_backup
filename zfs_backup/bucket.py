@@ -36,7 +36,7 @@ class Bucket(object):
 
     def push(self, snapshot, stream):
         # Cut the first part of the snapshot name
-        key_name = ('%s:%s.gzip' % settings.HOSTNAME, snapshot).replace('/', '_')
+        key_name = ('%s:%s.gzip' % (settings.HOSTNAME, snapshot)).replace('/', '_')
 
         # Gzip the stream
         p = utils.command(
