@@ -64,8 +64,13 @@ class Bucket(object):
             logger.info('Pushed key %s in %ss' % (key_name, utils.total_seconds(datetime.now() - start_time)))
 
     def create_job(self, snapshot_name):
+        executable = sys.executable
+        executable_parts = executable.split('/')
+        executable_parts.pop()
+        executable = '%s/zfs_backup' % '/'.join(executable_parts)
+
         p = utils.command(
-            '%s zfs_backup send_snapshot --snapshot-name="%s"' % (sys.executable, snapshot_name),
+            '%s send_snapshot --snapshot-name="%s"' % (executable, snapshot_name),
             stdin=PIPE)
         p.stdin.write(json.dumps(self.settings))
         p.stdin.close()
