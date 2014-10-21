@@ -38,6 +38,7 @@ def snapshot_daemon():
         for child in children:
             os.kill(child.pid, signal.SIGTERM)
             os.waitpid(child.pid, 0)
+        os.kill(os.getpid(), signal.SIGKILL)
 
     signal.signal(signal.SIGTERM, soft_exit)
     signal.signal(signal.SIGINT, soft_exit)
@@ -85,6 +86,7 @@ def send_snapshot(snapshot_name):
     def soft_exit_once():
         logger.info('Soft exit...')
         bucket.terminate()
+        os.kill(os.getpid(), signal.SIGKILL)
 
     signal.signal(signal.SIGTERM, soft_exit)
     signal.signal(signal.SIGINT, soft_exit)
