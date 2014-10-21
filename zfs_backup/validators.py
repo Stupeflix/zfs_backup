@@ -8,3 +8,4 @@ def zfs_snapshot(ctx, param, value):
         check=True)
     if p.returncode != 0:
         raise click.BadParameter('zfs snapshot does not exist')
+    return value
