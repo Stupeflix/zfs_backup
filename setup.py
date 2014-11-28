@@ -4,7 +4,7 @@ from setuptools import setup
 import os.path as op
 CURRENT_DIR = op.dirname(__file__)
 
-version = open(op.join(CURRENT_DIR, 'zfs_backup', 'VERSION.txt')).read()
+version = open(op.join(CURRENT_DIR, 'zfs_backup', 'VERSION.txt')).read().strip()
 
 requirements = open(op.join(CURRENT_DIR, 'requirements.txt')).read()
 
