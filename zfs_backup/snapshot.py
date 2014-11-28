@@ -15,6 +15,8 @@ def create_snapshot_from_conf(conf):
         snapshot = PostgresHotSnapshot(conf)
     elif conf['TYPE'] == 'mysql':
         snapshot = MysqlSnapshot(conf)
+    elif conf['TYPE'] == 'git':
+        snapshot = GitSnapshot(conf)
     return snapshot
 
 
@@ -129,3 +131,7 @@ class MysqlSnapshot(Snapshot):
 
         dbh.query('UNLOCK TABLES;')
         dbh.close()
+
+
+class GitSnapshot(Snapshot):
+    pass
